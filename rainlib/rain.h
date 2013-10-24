@@ -28,258 +28,258 @@
 using namespace std;
 
 namespace rain {
-
-  /** 
-   *  @brief A Region object represents a region of code.
-   */
-  class Region {
-
-  public:
-
-    class Edge;
-
-    struct EdgeListItem
-    {
-    EdgeListItem() : edge(NULL), next(NULL) {}
-      Edge* edge;
-      EdgeListItem* next;
-    };
-      
     
-    /** 
-     *  @brief A Region Node object represents one instruction inside the region
+    /**
+     *  @brief A Region object represents a region of code.
      */
-    class Node
-    {
+    class Region {
+        
     public:
-      
-      Node();
-      Node(unsigned long long);
-      ~Node();
-      
-      unsigned long long getAddress() {return addr;}
-      
-      void insertOutEdge(Edge*, Node*);
-      void insertInEdge(Edge*, Node*);
-
-      Edge* findOutEdge(unsigned long long next_ip);
-      Edge* findOutEdge(Node* target) const;
-      Edge* findInEdge(Node* target) const;
-      
+        
+        class Edge;
+        
+        struct EdgeListItem
+        {
+            EdgeListItem() : edge(NULL), next(NULL) {}
+            Edge* edge;
+            EdgeListItem* next;
+        };
+        
+        
+        /**
+         *  @brief A Region Node object represents one instruction inside the region
+         */
+        class Node
+        {
+        public:
+            
+            Node();
+            Node(unsigned long long);
+            ~Node();
+            
+            unsigned long long getAddress() {return addr;}
+            
+            void insertOutEdge(Edge*, Node*);
+            void insertInEdge(Edge*, Node*);
+            
+            Edge* findOutEdge(unsigned long long next_ip);
+            Edge* findOutEdge(Node* target) const;
+            Edge* findInEdge(Node* target) const;
+            
+        public:
+            
+            unsigned long long  freq_counter; //< Frequency counter.
+            Region*  region;       //< Region (NULL for NTE)
+            
+            /** Instructions property */
+            struct instr_property {
+                instr_property() : call(false) {}
+                bool     call;         //< Call instruction?
+            } inst_property;
+            
+            /** List of out edges. */
+            EdgeListItem* out_edges;
+            EdgeListItem* in_edges;
+            
+        private:
+            
+            unsigned long long addr; //< Instruction address.
+        };
+        
+        /**
+         *  @brief A Region Edge represents the control flow between instructions.
+         */
+        class Edge
+        {
+        public:
+            
+            Edge() {}
+            Edge(Node* x, Node* y) : src(x), tgt(y), freq_counter(1) {}
+            
+            /// Address of the target instruction.
+            unsigned long long target() { return tgt->getAddress(); }
+            
+            /// Address of the source instruction.
+            unsigned long long source() { return src->getAddress(); }
+            
+        public:
+            
+            Node* src;                       //< Source node (instruction)
+            Node* tgt;                       //< Target node (instruction)
+            unsigned long long freq_counter; //< Frequency counter
+        };
+        
     public:
-
-      unsigned long long  freq_counter; //< Frequency counter.
-      Region*  region;       //< Region (NULL for NTE)
-
-      /** Instructions property */
-      struct instr_property {
-        instr_property() : call(false) {}
-	bool     call;         //< Call instruction?
-      } inst_property;
-       
-      /** List of out edges. */
-      EdgeListItem* out_edges;
-      EdgeListItem* in_edges;
-      
+        
+        Region() : reg_out_edges(NULL), reg_in_edges(NULL)
+        {}
+        ~Region();
+        
+        unsigned long long allNodesFreq() const;
+        unsigned long long entryNodesFreq() const;
+        unsigned long long exitNodesFreq() const;
+        unsigned long long externalEntriesFreq() const;
+        unsigned long long mainExitsFreq() const;
+        
+        void insertNode(Node * node)
+        {
+            node->region = this;
+            nodes.push_back(node);
+        }
+        void setEntryNode(Node* node)
+        {entry_nodes.push_back(node);}
+        void setExitNode(Node* node)
+        {exit_nodes.push_back(node);}
+        Edge* createInnerRegionEdge(Node* src, Node* tgt);
+        
+        /** A região é composta por nós ligados por arestas, semelhante a um CFG. */
+        list<Node* > nodes;
+        /** List of pointer to entry nodes. */
+        list<Node* > entry_nodes;
+        /** List of pointer to exit nodes. */
+        list<Node* > exit_nodes;
+        
+        /** Region identifier -- debug purposes. */
+        unsigned id;
+        
+        void insertRegOutEdge(Edge*);
+        void insertRegInEdge(Edge*);
+        
+        /** List of pointers to region out edges. */
+        EdgeListItem* reg_out_edges;
+        /** List of pointers to region in edges. */
+        EdgeListItem* reg_in_edges;
+        
     private:
-
-      unsigned long long addr; //< Instruction address.
+        
+        bool isInnerEdge(Edge* e) const;
+        
+        /** Region inner edges. */
+        list<Edge* > region_inner_edges;
+        
     };
     
-    /** 
-     *  @brief A Region Edge represents the control flow between instructions.
+    /**
+     * Region Appraisal Infrastructure class
+     * In order to update the state of the trace execution automata (TEA),
+     * the user may:
+     *
+     * // query the edge that will be followed if next addr is executed
+     * edg = queryNext(addr);
+     * // create a new edge, in case there is no existing edge.
+     * if (!edg)
+     *   edg = addNext(addr);
+     * // then, execute the edge to update the internal state (current node, etc...)
+     * executeEdge(edg);
+     *
      */
-    class Edge
+    class RAIn
     {
+    private:
+        
+        map<unsigned long long, Region::Edge*> edges;
+        
+        /** List of inter region edges. */
+        list<Region::Edge* > inter_region_edges;
+        
+        unsigned region_id_generator;
+        
     public:
-
-      Edge() {}
-      Edge(Node* x, Node* y) : src(x), tgt(y), freq_counter(1) {}
-      
-      /// Address of the target instruction.
-      unsigned long long target() { return tgt->getAddress(); }
-
-      /// Address of the source instruction.
-      unsigned long long source() { return src->getAddress(); }
-      
-    public:
-
-      Node* src;                       //< Source node (instruction)
-      Node* tgt;                       //< Target node (instruction)
-      unsigned long long freq_counter; //< Frequency counter
+        
+        /** Map region identifiers to regions. */
+        map<unsigned, Region*> regions;
+        
+        /** NTE node */
+        Region::Node* nte;
+        /** NTE loop edge. */
+        Region::Edge* nte_loop_edge;
+        /** NTE out edges map for fast searches. */
+        map<unsigned long long, Region::Edge*> nte_out_edges_map;
+        
+        /** Current node. */
+        Region::Node* cur_node;
+        
+        /** Hash table for entry nodes. */
+        map<unsigned long long, Region::Node*> region_entry_nodes;
+        
+        RAIn() : region_id_generator(1) // id 0 is reserved for NTE
+        {
+            nte = new Region::Node(0);
+            nte->region = 0;
+            nte_loop_edge = new Region::Edge();
+            nte_loop_edge->src = nte_loop_edge->tgt = nte;
+            cur_node = nte;
+        }
+        
+        ~RAIn()
+        {
+            delete nte;
+            delete nte_loop_edge;
+            for (map<unsigned, Region*>::iterator it = regions.begin();
+                 it != regions.end(); it++)
+            {
+                Region* r = it->second;
+                delete r;
+            }
+            regions.clear();
+        }
+        
+        /** Return the edge that will be followed if the next_ip is executed. */
+        Region::Edge* queryNext(unsigned long long next_ip);
+        
+        /** Add edge supposing next_ip is the next instruction to be executed.
+         *  This should be called only if queryNext has returned NULL. */
+        Region::Edge* addNext(unsigned long long next_ip);
+        
+        /** Execute the edge (update the current node and related statistics). */
+        void executeEdge(Region::Edge* edg);
+        
+        /** Create a new region. */
+        Region* createRegion();
+        
+        /** Create an edge to connect two nodes from different regions. */
+        Region::Edge* createInterRegionEdge(Region::Node*, Region::Node*);
+        
+        void setEntry(Region::Node *);
+        void setExit(Region::Node *);
+        
+        void printRegionsStats(ostream&);
+        void printOverallStats(ostream&);
+        
+        void printRAInStats(ostream&);
+        void printRegionDOT(Region *, ostream&);
+        void printRegionsDOT(string&);
     };
     
-  public:
-    
-    Region() : reg_out_edges(NULL), reg_in_edges(NULL) 
-      {}
-    ~Region();
-
-    unsigned long long allNodesFreq() const;
-    unsigned long long entryNodesFreq() const;
-    unsigned long long exitNodesFreq() const;
-    unsigned long long externalEntriesFreq() const;
-    unsigned long long mainExitsFreq() const;
-    
-    void insertNode(Node * node)
+    class RF_Technique
     {
-      node->region = this;
-      nodes.push_back(node);
-    }
-    void setEntryNode(Node* node)
-    {entry_nodes.push_back(node);}
-    void setExitNode(Node* node)
-    {exit_nodes.push_back(node);}
-    Edge* createInnerRegionEdge(Node* src, Node* tgt);
+    public:
+        
+        virtual void 
+        process(unsigned long long cur_addr, char cur_opcode[16], 
+                char unsigned cur_length, 
+                unsigned long long nxt_addr, char nxt_opcode[16], 
+                char unsigned nxt_length) = 0;
+        
+        virtual void finish() = 0;
+        
+        RAIn rain;
+        
+        static void set_system_threshold(unsigned long long addr) {
+            system_threshold = addr;
+        }
+        
+    protected:
+        
+        bool is_system_instr(unsigned long long addr)
+        {
+            return (addr >= system_threshold);
+        }
+        
+        static unsigned long long system_threshold;
+        
+    };
     
-    /** A região é composta por nós ligados por arestas, semelhante a um CFG. */
-    list<Node* > nodes;
-    /** List of pointer to entry nodes. */
-    list<Node* > entry_nodes;
-    /** List of pointer to exit nodes. */
-    list<Node* > exit_nodes;
-
-    /** Region identifier -- debug purposes. */
-    unsigned id;
-
-    void insertRegOutEdge(Edge*);
-    void insertRegInEdge(Edge*);
-
-    /** List of pointers to region out edges. */
-    EdgeListItem* reg_out_edges;
-    /** List of pointers to region in edges. */
-    EdgeListItem* reg_in_edges;
-
-  private:
-
-    bool isInnerEdge(Edge* e) const;
-
-    /** Region inner edges. */
-    list<Edge* > region_inner_edges;
-
-  };
-  
-  /** 
-   * Region Appraisal Infrastructure class
-   * In order to update the state of the trace execution automata (TEA),
-   * the user may:
-   *
-   * // query the edge that will be followed if next addr is executed
-   * edg = queryNext(addr);
-   * // create a new edge, in case there is no existing edge.
-   * if (!edg)
-   *   edg = addNext(addr);
-   * // then, execute the edge to update the internal state (current node, etc...)
-   * executeEdge(edg);
-   * 
-   */
-  class RAIn
-  {
-  private:
-
-    map<unsigned long long, Region::Edge*> edges;
-
-    /** List of inter region edges. */
-    list<Region::Edge* > inter_region_edges;
-  
-    unsigned region_id_generator;
-
-  public:	
-    
-    /** Map region identifiers to regions. */
-    map<unsigned, Region*> regions;
-
-    /** NTE node */
-    Region::Node* nte;
-    /** NTE loop edge. */
-    Region::Edge* nte_loop_edge;
-    /** NTE out edges map for fast searches. */
-    map<unsigned long long, Region::Edge*> nte_out_edges_map;
-
-    /** Current node. */
-    Region::Node* cur_node;
-    
-    /** Hash table for entry nodes. */
-    map<unsigned long long, Region::Node*> region_entry_nodes;
-
-    RAIn() : region_id_generator(1) // id 0 is reserved for NTE
-    {
-      nte = new Region::Node(0);
-      nte->region = 0;
-      nte_loop_edge = new Region::Edge();
-      nte_loop_edge->src = nte_loop_edge->tgt = nte;
-      cur_node = nte;
-    }
-  
-    ~RAIn()
-    {
-      delete nte;
-      delete nte_loop_edge;
-      for (map<unsigned, Region*>::iterator it = regions.begin(); 
-	   it != regions.end(); it++)
-      {
-	Region* r = it->second;
-	delete r;
-      }
-      regions.clear();
-    }
-  
-    /** Return the edge that will be followed if the next_ip is executed. */
-    Region::Edge* queryNext(unsigned long long next_ip);
-
-    /** Add edge supposing next_ip is the next instruction to be executed. 
-     *  This should be called only if queryNext has returned NULL. */
-    Region::Edge* addNext(unsigned long long next_ip);
-
-    /** Execute the edge (update the current node and related statistics). */
-    void executeEdge(Region::Edge* edg);
-    
-    /** Create a new region. */
-    Region* createRegion();
-    
-    /** Create an edge to connect two nodes from different regions. */
-    Region::Edge* createInterRegionEdge(Region::Node*, Region::Node*);
-
-    void setEntry(Region::Node *);
-    void setExit(Region::Node *);
-    
-    void printRegionsStats(ostream&);
-    void printOverallStats(ostream&);
-
-    void printRAInStats(ostream&);
-    void printRegionDOT(Region *, ostream&);
-    void printRegionsDOT(string&);
-  };
-  
-  class RF_Technique
-  {
-  public:
-
-    virtual void 
-      process(unsigned long long cur_addr, char cur_opcode[16], 
-	      char unsigned cur_length, 
-	      unsigned long long nxt_addr, char nxt_opcode[16], 
-	      char unsigned nxt_length) = 0;
-
-    virtual void finish() = 0;
-
-    RAIn rain;
-
-    static void set_system_threshold(unsigned long long addr) {
-      system_threshold = addr;
-    }
-
-  protected:
-
-    bool is_system_instr(unsigned long long addr)
-    {
-      return (addr >= system_threshold);
-    }
-
-    static unsigned long long system_threshold;
-
-  };
-
 };
 
 #endif // RAIN_H

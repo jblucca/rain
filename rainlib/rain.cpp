@@ -38,11 +38,11 @@ using namespace rain;
 
 unsigned long long RF_Technique::system_threshold;
 
-Region::Node::Node() : region(NULL), freq_counter(0), 
+Region::Node::Node() : freq_counter(0), region(NULL),
 		       out_edges(NULL), in_edges(NULL) 
 {}
 
-Region::Node::Node(unsigned long long a) : region(NULL), freq_counter(0), 
+Region::Node::Node(unsigned long long a) : freq_counter(0), region(NULL),
 					   out_edges(NULL), in_edges(NULL),
 					   addr(a)
 {}
@@ -513,7 +513,7 @@ void RAIn::printRegionDOT(Region* region, ostream& reg)
        nit != region->nodes.end(); nit++) {
     Region::Node* n = *nit;
     node_id[n] = id_gen++;
-    reg << "  n" << node_id[n] << " [label=\"0x" << setbase(16) << n->getAddress() << "\"]" << endl;
+    reg << "  n" << node_id[n] << " [label=\"0x" << setbase(16) << n->getAddress() << "\"];" << endl;
   }
 
   reg << "/* edges */" << endl;
