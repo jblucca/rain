@@ -1,0 +1,8 @@
+Para instalar a lib de decodificacao eh simples:
+
+a) extraia o arquivo tar.gz da lib
+b) entre no diretorio e de um "./configure"
+c) depois "make"
+d) por fim, "sudo make install"
+
+PRONTO!
