@@ -24,7 +24,7 @@
 
 #include "arglib.h"
 #include "trace_io.h"
-#include <fstream> // ofstream
+#include <fstream>
 
 using namespace std;
 
@@ -76,39 +76,38 @@ int validate_arguments()
   return 0;
 }
 
-int main(int argc,char** argv)
-{
-  // Parse the arguments
-  if (clarg::parse_arguments(argc, argv)) {
-    cerr << "Error when parsing the arguments!" << endl;
-    return 1;
-  }
+int main(int argc,char* argv[]) {
+	// Parse the arguments
+	
+	if (clarg::parse_arguments(argc, argv)) {
+		cerr << "Error when parsing the arguments!" << endl;
+		return 1;
+	}
 
-  if (help.get_value() == true) {
-    usage(argv[0]);
-    return 1;
-  }
+	if (help.get_value() == true) {
+		usage(argv[0]);
+		return 1;
+	}
 
-  if (validate_arguments()) 
-    return 1;
+	if ( validate_arguments() ) { return 1; }
 
-  // Create the input pipe.
-  trace_io::raw_input_pipe_t in(basename.get_value(), 
-				start_i.get_value(), 
-				end_i.get_value());
+	// Create the input pipe.
+	trace_io::raw_input_pipe_t in(basename.get_value(), start_i.get_value(), end_i.get_value());
+	
+	// Create the output pipe.
+	trace_io::raw_output_pipe_t out(out_fn.get_value());
+	
+	// Create trace item.
+	trace_io::trace_item_t trace_item;
 
-  // Create the input pipe.
-  trace_io::raw_output_pipe_t out(out_fn.get_value());
+	// While there are instructions
+	while (in.get_next_instruction(trace_item)) {
+		
+		// Clean unused bytes
+		for(int i=trace_item.length; i<16; ++i) { trace_item.opcode[i] = 0; }
 
-  trace_io::trace_item_t trace_item;
+		out.write_trace_item(trace_item);
+	}
 
-  // While there are instructions
-  while (in.get_next_instruction(trace_item)) {
-    // Clean unused bytes
-    for(int i=trace_item.length; i<16; i++)
-      trace_item.opcode[i] = 0;
-    out.write_trace_item(trace_item);
-  }
-
-  return 0; // Return OK.
+	return 0; // Return OK.
 }
