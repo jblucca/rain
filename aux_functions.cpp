@@ -18,7 +18,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
 #include "aux_functions.h"
 
 
@@ -30,7 +29,7 @@ bool ModifiesFlags (enum ud_mnemonic_code M) {
 	short i_pos = 0;
 	short prod = 1;
 
-	while ( pos < sizeof (EFLAGS) ) {
+	while ( pos < EFLAGS_SIZE ) {
 		if (EFLAGS[pos] == M) {
 			for (i_pos = (pos+1); i_pos < (pos+12); ++i_pos) { prod *= EFLAGS[i_pos]; }
 			
@@ -58,7 +57,7 @@ bool TestsFlags (enum ud_mnemonic_code M) {
 	short i_pos = 0;
 	short prod = 1;
 
-	while ( pos < sizeof (EFLAGS) ) {
+	while ( pos < EFLAGS_SIZE ) {
 		if (EFLAGS[pos] == M) {
 			for (i_pos = (pos+1); i_pos < (pos+12); ++i_pos) { prod *= EFLAGS[i_pos]; }
 			

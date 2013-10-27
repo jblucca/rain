@@ -23,6 +23,7 @@
 #define AUX_FUNC_H
 
 #include <string.h>
+
 #include "eflags.h"
 
 bool ModifiesFlags (enum ud_mnemonic_code M);

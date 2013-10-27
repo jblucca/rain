@@ -28,7 +28,10 @@
 #include <string.h>	
 #include <stdio.h>
 
-#include <udis86.h>
+extern "C"
+{
+#include "udis86.h"
+}
 
 #include "arglib.h"
 #include "trace_io.h"

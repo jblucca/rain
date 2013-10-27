@@ -26,13 +26,18 @@ add_subdirectory(arglib)
 add_subdirectory(tracelib)
 add_subdirectory(rainlib)
 
-# Add executable
-add_executable(rain_tool.bin main.cpp)
-add_executable(filter_tool.bin filter.cpp)
-
 include_directories ("${PROJECT_SOURCE_DIR}/arglib")
 include_directories ("${PROJECT_SOURCE_DIR}/tracelib")
 include_directories ("${PROJECT_SOURCE_DIR}/rainlib")
+include_directories ("${PROJECT_SOURCE_DIR}/udis86/include")
 
-target_link_libraries (rain_tool.bin arglib tracelib rainlib)
-target_link_libraries (filter_tool.bin arglib tracelib)
+# Must be placed before defining the targets
+link_directories(${PROJECT_SOURCE_DIR}/udis86/lib)
+
+# Add executable
+add_executable(rain_tool.bin main.cpp aux_functions.cpp eflags.cpp)
+add_executable(filter_tool.bin filter.cpp aux_functions.cpp eflags.cpp)
+
+
+target_link_libraries (rain_tool.bin arglib tracelib rainlib udis86)
+target_link_libraries (filter_tool.bin arglib tracelib udis86)
